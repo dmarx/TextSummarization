@@ -9,6 +9,7 @@ import string
 from nltk.tokenize import sent_tokenize, word_tokenize
 import pandas as pd
 from nltk.corpus import reuters
+from sklearn.metrics.pairwise import pairwise_kernels
 
 from nltk.stem.wordnet import WordNetLemmatizer
 lemtz = WordNetLemmatizer()
@@ -44,13 +45,13 @@ def fit_vectorizer(text, verbose=False, tfidf=False):
         vect = CountVectorizer(tokenizer=word_tokenize, lowercase=True, preprocessor=None, stop_words='english', decode_error='ignore')
     return vect
     
-def vectorize(sentences, tfidf=True, ngrams=(1, 1)):
+def vectorize(sentences, tfidf=True, ngram_range=None):
     """
     Basically taken straight from https://github.com/lekhakpadmanabh/KeyPointsBot/blob/master/bot.py
     """
-    if ngrams is None:
-        ngrams = (1,1)
-    tdm = CountVectorizer(min_df=1, ngram_range=ngrams).fit_transform(sentences)
+    if ngram_range is None:
+        ngram_range = (1,1)
+    tdm = CountVectorizer(min_df=1, ngram_range=ngram_range, lowercase=True).fit_transform(sentences)
     return TfidfTransformer().fit_transform(tdm)
     
 def sparse_cosine_similarity_matrix(sp_mat):
@@ -64,17 +65,13 @@ def sparse_cosine_similarity_matrix(sp_mat):
         dx[z] = cosine_similarity(u.todense(), v.todense())
     return 1-dx
     
-def similarity_graph_from_sparse_matrix(sp_mat):
-    n = sp_mat.shape[0]
-    g = nx.Graph()
-    g.add_nodes_from(range(n))
-    for i,j in itertools.combinations(range(n),2):
-        u,v = sp_mat.getrow(i), sp_mat.getrow(j)
-        d = cosine_similarity(u.todense(), v.todense())
-        g.add_edge(i,j, {'weight':d})
+def similarity_graph_from_term_document_matrix(sp_mat):
+    dx = pairwise_kernels(sp_mat, metric='cosine')
+    g = nx.from_numpy_matrix(dx)
+    #g.add_nodes_from(range(n)) # unconnected nodes will still affect pagerank score, but I think they'll just affect scaling and not rank order, which is all we care about.
     return g
     
-def summarize(text, n=5, tfidf=False):
+def summarize(text, n=5, tfidf=False, ngram_range=None):
     """
     Given an input document, extracts and returns representative sentences.
     At present, returns top n sentences, but I hope to find an unsupervised 
@@ -83,15 +80,9 @@ def summarize(text, n=5, tfidf=False):
     print "Reading document..."
     sentences = sent_tokenize(text)
     print "Fitting vectorizer..."
-    #vectorizer = fit_vectorizer(text, tfidf=tfidf)
-    #if tfidf:
-    #    print "tf-idf transforming sentences..."
-    #    term_doc_matrix = vectorizer.transform(sentences)
-    #else:
-    #    term_doc_matrix = vectorizer.fit_transform(sentences)
-    term_doc_matrix = vectorize(sentences, tfidf=tfidf)
+    term_doc_matrix = vectorize(sentences, tfidf=tfidf, ngram_range=ngram_range)
     print "Building similarity graph..."
-    g = similarity_graph_from_sparse_matrix(term_doc_matrix)
+    g = similarity_graph_from_term_document_matrix(term_doc_matrix)
     print "Calculating sentence pagerank (lexrank)..."
     scores = pd.Series(nx.pagerank(g, weight='weight'))
     scores.sort(ascending=False)
@@ -99,16 +90,6 @@ def summarize(text, n=5, tfidf=False):
     ix.sort()
     summary = [sentences[i] for i in ix]
     return {'g':g, 'scores':scores, 'tdm':term_doc_matrix, 'summary':summary}
-
-# Train a tfidf vectorizer on the brown corpus
-
-#vocabulary = brown.words(categories='news')
-#vocabulary.extend(word_tokenize(text))
-
-        
-    
-# From TwitterProject2/outlier_analysis.py
-#vectorizer = CountVectorizer(tokenizer=None, preprocessor=None, stop_words=None, decode_error='ignore')
 
 if __name__ == '__main__':
     text = """
