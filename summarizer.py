@@ -91,10 +91,3 @@ def summarize(text, n=5, tfidf=False, ngram_range=None):
     ix.sort()
     summary = [sentences[i] for i in ix]
     return {'g':g, 'scores':scores, 'tdm':term_doc_matrix, 'summary':summary}
-
-if __name__ == '__main__':
-    text = """
-    This is the first sentence. I'm not really writing an article about anything. I just need a few sentences to play with.
-    So far I have like, what three? I guess that last one was the fourth sentence making this my fifth sentence. Quite
-    an interesting article I'm writing here. Woohoo. Look at me go. Maybe just a few more sentences.
-    """
