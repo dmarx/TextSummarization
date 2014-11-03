@@ -4,13 +4,17 @@ import itertools
 from scipy.spatial.distance import pdist
 from scipy.spatial.distance import cosine as cosine_similarity #0 bad, 1 good
 from scipy.misc import comb # n choose k
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer, TfidfTransformer
 import string
 from nltk.tokenize import sent_tokenize, word_tokenize
 import pandas as pd
 from nltk.corpus import reuters
 
-def normalize_and_tokenize(text, stemmer = nltk.PorterStemmer().stem):
+from nltk.stem.wordnet import WordNetLemmatizer
+lemtz = WordNetLemmatizer()
+
+#def normalize_and_tokenize(text, stemmer = nltk.PorterStemmer().stem):
+def normalize_and_tokenize(text, stemmer = lemtz.lemmatize):
     """
     Alternateively, try the slower: 
         stemmer = nltk.WordNetLemmatizer().lemmatize
@@ -40,6 +44,14 @@ def fit_vectorizer(text, verbose=False, tfidf=False):
         vect = CountVectorizer(tokenizer=word_tokenize, lowercase=True, preprocessor=None, stop_words='english', decode_error='ignore')
     return vect
     
+def vectorize(sentences, tfidf=True, ngrams=(1, 1)):
+    """
+    Basically taken straight from https://github.com/lekhakpadmanabh/KeyPointsBot/blob/master/bot.py
+    """
+    if ngrams is None:
+        ngrams = (1,1)
+    tdm = CountVectorizer(min_df=1, ngram_range=ngrams).fit_transform(sentences)
+    return TfidfTransformer().fit_transform(tdm)
     
 def sparse_cosine_similarity_matrix(sp_mat):
     """Returns the distance matrix of an input sparse matrix using cosine distance"""
@@ -71,12 +83,13 @@ def summarize(text, n=5, tfidf=False):
     print "Reading document..."
     sentences = sent_tokenize(text)
     print "Fitting vectorizer..."
-    vectorizer = fit_vectorizer(text, tfidf=tfidf)
-    if tfidf:
-        print "tf-idf transforming sentences..."
-        term_doc_matrix = vectorizer.transform(sentences)
-    else:
-        term_doc_matrix = vectorizer.fit_transform(sentences)
+    #vectorizer = fit_vectorizer(text, tfidf=tfidf)
+    #if tfidf:
+    #    print "tf-idf transforming sentences..."
+    #    term_doc_matrix = vectorizer.transform(sentences)
+    #else:
+    #    term_doc_matrix = vectorizer.fit_transform(sentences)
+    term_doc_matrix = vectorize(sentences, tfidf=tfidf)
     print "Building similarity graph..."
     g = similarity_graph_from_sparse_matrix(term_doc_matrix)
     print "Calculating sentence pagerank (lexrank)..."
