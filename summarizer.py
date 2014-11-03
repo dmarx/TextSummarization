@@ -51,8 +51,9 @@ def vectorize(sentences, tfidf=True, ngram_range=None):
     """
     if ngram_range is None:
         ngram_range = (1,1)
-    tdm = CountVectorizer(min_df=1, ngram_range=ngram_range, lowercase=True).fit_transform(sentences)
-    return TfidfTransformer().fit_transform(tdm)
+    vect = TfidfVectorizer(sublinear_tf=True, max_df=0.5, analyzer='word', 
+                   stop_words='english', lowercase=True, ngram_range=ngram_range)
+    return vect.fit_transform(sentences)
     
 def sparse_cosine_similarity_matrix(sp_mat):
     """Returns the distance matrix of an input sparse matrix using cosine distance"""
