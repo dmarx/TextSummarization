@@ -1,3 +1,4 @@
+from __future__ import print_function
 import nltk
 import networkx as nx
 import itertools
@@ -72,22 +73,25 @@ def similarity_graph_from_term_document_matrix(sp_mat):
     #g.add_nodes_from(range(n)) # unconnected nodes will still affect pagerank score, but I think they'll just affect scaling and not rank order, which is all we care about.
     return g
     
-def summarize(text, n=5, tfidf=False, ngram_range=None):
+def summarize(text=None, term_doc_matrix=None,  n=5, tfidf=False, ngram_range=None, verbose=False):
     """
     Given an input document, extracts and returns representative sentences.
     At present, returns top n sentences, but I hope to find an unsupervised 
     heuristic to determine an appropriate n.
     """
-    print "Reading document..."
-    sentences = sent_tokenize(text)
-    print "Fitting vectorizer..."
-    term_doc_matrix = vectorize(sentences, tfidf=tfidf, ngram_range=ngram_range)
-    print "Building similarity graph..."
+    if term_doc_matrix is None:
+        if verbose: print("Reading document...")
+        sentences = sent_tokenize(text)
+        if verbose: print("Fitting vectorizer...")
+        term_doc_matrix = vectorize(sentences, tfidf=tfidf, ngram_range=ngram_range)
+    if verbose: print("Building similarity graph...")
     g = similarity_graph_from_term_document_matrix(term_doc_matrix)
-    print "Calculating sentence pagerank (lexrank)..."
+    if verbose: print("Calculating sentence pagerank (lexrank)...")
     scores = pd.Series(nx.pagerank(g, weight='weight'))
-    scores.sort(ascending=False)
+    #scores.sort(ascending=False)
+    scores.sort_values(ascending=False, inplace=True)
     ix = pd.Series(scores.index[:n])
-    ix.sort()
+    #ix.sort()
+    ix.sort_values(inplace=True)
     summary = [sentences[i] for i in ix]
     return {'g':g, 'scores':scores, 'tdm':term_doc_matrix, 'summary':summary}
