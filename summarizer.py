@@ -24,7 +24,12 @@ def normalize_and_tokenize(text, stemmer = lemtz.lemmatize):
         stemmer = lambda t: nltk.PorterStemmer().stem(nltk.WordNetLemmatizer().lemmatize(t))
     """
     tokens = word_tokenize(text)
-    return [stemmer(t).translate(None, string.punctuation) for t in tokens]
+    try: # py2
+        outv = [stemmer(t).translate(None, string.punctuation) for t in tokens] 
+        return outv
+    except: # py3
+        translator = str.maketrans(dict.fromkeys(string.punctuation))
+        return [stemmer(t).translate(translator) for t in tokens]
 
 
 # def fit_vectorizer(text, verbose=False, tfidf=False):
